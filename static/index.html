@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boss Finance</title>
+<link rel="stylesheet" href="bootstrap.min.css"><link rel="stylesheet" href="bootstrap-icons.min.css"><link rel="stylesheet" href="app.css">
+<script>try{var q=new URLSearchParams(location.search).get('theme');document.documentElement.setAttribute('data-bs-theme',q||localStorage.getItem('theme')||'dark')}catch(e){}</script>
+</head>
+<body>
+<nav class="navbar topbar d-lg-none px-3 sticky-top">
+  <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#sb"><i class="bi bi-list"></i></button>
+  <span class="fw-bold"><i class="bi bi-wallet2 text-primary"></i> Boss Finance</span>
+  <button class="btn btn-outline-secondary btn-sm theme-btn"><i class="bi bi-moon-stars"></i></button>
+</nav>
+<div class="offcanvas-lg offcanvas-start sidebar" tabindex="-1" id="sb">
+  <div class="p-3 d-flex flex-column h-100">
+    <div class="brand mb-3"><i class="bi bi-wallet2"></i> <span>Boss Finance</span></div>
+    <ul class="nav nav-pills flex-column gap-1" id="nav"></ul>
+    <div class="mt-auto pt-3 small text-secondary">
+      <div id="side-status" class="mb-2"></div>
+      <div class="d-flex gap-2"><button class="btn btn-sm btn-outline-secondary flex-fill" id="btn-settings"><i class="bi bi-sliders"></i> Settings</button>
+      <button class="btn btn-sm btn-outline-secondary theme-btn"><i class="bi bi-moon-stars"></i></button></div>
+    </div>
+  </div>
+</div>
+<main class="content">
+  <div class="container-fluid px-3 px-xl-4 py-3" id="app">
+    <div class="text-center p-5"><div class="spinner-border"></div></div>
+  </div>
+</main>
+
+<div class="modal fade" id="formModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><form class="modal-content" id="formEl" novalidate>
+  <div class="modal-header"><h5 class="modal-title" id="formTitle"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body" id="formBody"></div>
+  <div class="modal-footer"><div class="text-danger me-auto small" id="formErr"></div><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="formOk">Save</button></div>
+</form></div></div>
+<div class="modal fade" id="confirmModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title"><i class="bi bi-exclamation-triangle text-warning"></i> Please confirm</h5></div>
+  <div class="modal-body" id="confirmBody"></div>
+  <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-danger" id="confirmOk">Confirm</button></div>
+</div></div></div>
+<div class="modal fade" id="dayModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="dayTitle"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body" id="dayBody"></div></div></div></div>
+<div class="modal fade" id="alertsModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title"><i class="bi bi-bell"></i> Notifications &amp; Warnings</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body" id="alertsBody"></div></div></div></div>
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toasts"></div>
+<script src="bootstrap.bundle.min.js"></script><script src="chart.umd.min.js"></script><script src="tips.js"></script><script src="mascot.js"></script><script src="app.js"></script>
+</body></html>

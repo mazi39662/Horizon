@@ -1,0 +1,24 @@
+# Secrets and Environment Variables
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Application Data (Do not push personal finance data to GitHub!)
+finance.json
+notes.json
+changes.json
+backups/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+scratch/

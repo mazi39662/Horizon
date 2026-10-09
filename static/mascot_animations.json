@@ -1,0 +1,57 @@
+{
+  "animations": [
+    "Thinking", "Excited", "Skeptical", "Crying", "Gaming", "Hungry", "Grumpy", "Asleep", "Mind Blown",
+    "Presenting", "Guiding", "Asking", "Demonstrating", "Observing", "Assessing", "Correcting", "Collaborating", "Encouraging",
+    "Raining", "Stashing", "Counting", "Flexing", "Crypto", "Investing", "Broke", "Savings Jar", "Shopping",
+    "Introducing", "Explaining", "Agreeing", "Debating", "Listening", "Storytelling", "Interjecting", "Shouting", "Laughing Fit",
+    "Smirking", "Grinning", "Winking", "Tears of Joy", "Pleading", "Cool"
+  ],
+  "default": "Introducing",
+  "examples": [
+    {
+      "trigger": "Idle / Default",
+      "emotion": "Introducing",
+      "text": "Hello! I am your AI Grok Bot. How can I assist you with your finances today?"
+    },
+    {
+      "trigger": "Payment Reminder",
+      "emotion": "Assessing",
+      "text": "Just a quick reminder: you have a payment due today. Let's make sure it's taken care of!"
+    },
+    {
+      "trigger": "Hit Savings Goal",
+      "emotion": "Flexing",
+      "text": "Awesome job! You just hit your savings target. Keep up the great work!"
+    },
+    {
+      "trigger": "Income Received / Pay Day",
+      "emotion": "Raining",
+      "text": "Incoming funds detected! It's raining money today!"
+    },
+    {
+      "trigger": "Overspending Alert",
+      "emotion": "Skeptical",
+      "text": "Hmm, looks like your spending is a bit high this week. We might need to review your budget."
+    },
+    {
+      "trigger": "Market Update",
+      "emotion": "Investing",
+      "text": "The market is showing some interesting trends today. Let's take a look at your portfolio."
+    },
+    {
+      "trigger": "Checking Crypto",
+      "emotion": "Crypto",
+      "text": "Taking a look at the crypto charts for you..."
+    },
+    {
+      "trigger": "Adding to Savings",
+      "emotion": "Savings Jar",
+      "text": "Dropping those coins into your savings jar!"
+    },
+    {
+      "trigger": "Too Many Expenses",
+      "emotion": "Crying",
+      "text": "Oh no, those expenses are really piling up..."
+    }
+  ]
+}
