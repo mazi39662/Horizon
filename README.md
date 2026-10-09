@@ -1,57 +1,99 @@
-# Boss Finance
+<div align="center">
+  
+# 🌅 Horizon
+**Your Forward-Looking Financial Co-Pilot**
 
-Boss Finance is a privacy-first, locally-hosted personal finance tracking and projection application. Instead of just looking backwards at what you've already spent, Boss Finance looks **forward**. It acts as your financial co-pilot, accurately projecting your cash flow months into the future so you know exactly how much you can safely spend today.
+[![Local Privacy](https://img.shields.io/badge/Privacy-100%25_Local-success?style=for-the-badge)](https://github.com/yourusername/horizon)
+[![Stack](https://img.shields.io/badge/Stack-Python_%7C_JS_%7C_Bootstrap-blue?style=for-the-badge)](https://github.com/yourusername/horizon)
 
-## 🚀 Features
+*Stop looking backwards at what you've already spent. Start looking over the horizon.*
 
-- **Dynamic Daily Budget Calculator**: A highly interactive envelope-budgeting system. Input your current cash, upcoming bills, and emergency reserves to calculate exactly how much money is *safe to spend* per day until your next payday without going broke.
-- **Forward-Looking Cash Projections**: Visualizes your cash flow over the next 60–90 days using Chart.js. It automatically warns you in advance of critical dates (e.g., when your cash might dip below safe levels or hit zero).
-- **Bill & Debt Management**: Track all recurring subscriptions, bills, and debt payments. The system automatically reserves cash for these items *before* giving you your daily free-spending allowance.
-- **Accounts & Income Tracking**: Manage multiple wallets and bank accounts. Track pending vs. confirmed income sources.
-- **Interactive Calendar**: A dynamic monthly view that plots out your paydays, bill due dates, daily expenses, and projects your exact cash balance at the end of each day.
-- **Business Plan & Goal Tracking**: Specialized modules for tracking savings goals or plotting out capital expenditures (like investing in equipment or a business build-out).
-- **100% Local & Private**: All your data is saved locally on your machine in `.json` files. No cloud syncs, no data selling, no privacy risks.
+</div>
+
+---
+
+**Horizon** is a privacy-first, locally-hosted personal finance dashboard. It projects your cash flow months into the future and uses zero-based envelope budgeting to tell you exactly how much money is **safe to spend today** without jeopardizing next week's bills.
+
+<br>
+
+## ✨ Why Horizon?
+
+Unlike standard budget trackers that act like rearview mirrors, Horizon predicts the future. By locking in your recurring bills and emergency targets, it calculates a guilt-free **Daily Allowance**. If you overspend today, it gracefully lowers tomorrow's budget. If you underspend, it rewards you by rolling the cash forward!
+
+### Core Features
+
+* 🧮 **Date-Adjustable Daily Budget Calculator**  
+  An interactive sandbox that lets you tweak your income horizon, emergency reserves, and safe-spending percentage to instantly calculate your daily allowance and potential savings.
+  
+* 📈 **60-Day Forward Cash Projections**  
+  Visualizes your cash flow over the next two months using Chart.js. Get automatically warned when your cash might dip into *Warning*, *Critical*, or *Zero* levels.
+
+* 📅 **Interactive Financial Calendar**  
+  A dynamic monthly view plotting your paydays and bill due dates, showing your exact projected cash balance at the end of each day.
+
+* 💼 **Business Plan & Goal Tracking**  
+  Specialized modules for tracking capital expenditures (like investing in PC equipment) and long-term savings goals.
+
+---
 
 ## 🛠️ Technology Stack
 
-- **Backend**: Python (`server.py`) acting as a lightweight API and server.
-- **Frontend**: Vanilla JavaScript (`app.js`), HTML5, and CSS3.
-- **Styling**: Bootstrap 5 for a clean, responsive, and mobile-friendly dark-mode UI.
-- **Charts**: Chart.js for data visualization and financial projections.
-- **Data Storage**: Local JSON files (`finance.json`, `notes.json`, etc.) acting as a local database.
+| Component | Technology | Description |
+| :--- | :--- | :--- |
+| **Backend** | `Python` | A lightweight server (`server.py`) acting as the local API. |
+| **Frontend** | `Vanilla JS` | Fast, reactive DOM manipulation without heavy frameworks. |
+| **Styling** | `Bootstrap 5` | Sleek, dark-mode native, and perfectly responsive. |
+| **Charts** | `Chart.js` | For rendering beautiful, interactive financial projections. |
+| **Database** | `JSON Files` | `finance.json` acting as a secure, local-only datastore. |
 
-## 📦 Getting Started
+<br>
 
-### Prerequisites
-- Python 3.x installed on your machine.
+## 🚀 Getting Started
 
-### Installation & Running
-1. Clone this repository to your local machine.
-2. Open a terminal or command prompt in the project directory.
-3. Run the backend server:
-   ```bash
-   python server.py
-   ```
-   *(Alternatively, use the provided `run_dashboard.bat` script on Windows).*
-4. Open your web browser and navigate to the local address provided by the server (typically `http://localhost:5000` or `http://127.0.0.1:8000`).
+### 1. Requirements
+* Python 3.x
 
-## 🔒 Security Note
-Because this app handles your personal financial data, **do not** commit your local database files to a public repository. The included `.gitignore` file is pre-configured to ignore all sensitive data files (`finance.json`, `notes.json`, `changes.json`) and environment variables (`.env`).
+### 2. Installation & Running
+Clone this repository to your local machine:
+```bash
+git clone https://github.com/yourusername/horizon.git
+cd horizon
+```
+
+Run the backend server:
+```bash
+python server.py
+```
+*(Windows users can simply double-click the `run_dashboard.bat` script).*
+
+Finally, open your web browser and navigate to `http://localhost:5000` (or the port provided in your terminal).
+
+---
 
 ## 🤖 AI Agent Integration (Grok / Hermes)
 
-Boss Finance is designed to work seamlessly with AI coding and analysis agents like **Grok Bot** or **Hermes Agent**. You can give an AI agent access to this local workspace to act as your personalized, automated financial advisor.
+Horizon was built to be highly compatible with AI coding and analysis agents. You can give an AI agent access to this local workspace to act as your personalized, automated financial advisor!
 
-To get started, copy and paste the following prompt to your AI agent:
+To get started, copy and paste this **System Prompt** to your AI agent:
 
-> **Starter Prompt for your AI Agent:**
-> "You are my personal financial advisor and planner. I am using the 'Boss Finance' local web dashboard in this workspace. Your first task is to help me set up my financial profile.
+> **System Prompt for Financial AI Agent:**
+> 
+> "You are my personal financial advisor and planner. I am using the 'Horizon' local web dashboard in this workspace. Your first task is to help me set up my financial profile.
 > 
 > Please conduct an interactive interview with me. Ask me questions step-by-step to gather my financial data (current cash across different accounts, my upcoming recurring bills, my debts, and my target emergency fund). Do not overwhelm me; ask me one or two things at a time.
 > 
 > As you gather this data, format it and save it directly into the `finance.json` file to automatically populate my dashboard.
 > 
-> Going forward, you must use `finance.json` as your absolute reference data for any financial planning, projections, or advice you give me. When you suggest financial strategies or run simulations, use the Boss Finance dashboard as your visual interface to communicate with me. Direct me to look at the 'Date-Adjustable Daily Budget Calculator' or the Cash Projection charts in the UI so I can see the exact impact of your advice."
+> Going forward, you must use `finance.json` as your absolute reference data for any financial planning, projections, or advice you give me. When you suggest financial strategies or run simulations, use the Horizon dashboard as your visual interface to communicate with me. Direct me to look at the 'Date-Adjustable Daily Budget Calculator' or the Cash Projection charts in the UI so I can see the exact impact of your advice."
 
-## 🤝 Contributing
-Feel free to fork the repository and submit pull requests. For major changes, please open an issue first to discuss what you would like to change.
+---
+
+## 🔒 Security & Privacy
+Because this app handles your most sensitive personal financial data, **do not** commit your local database files to a public repository. 
+
+The included `.gitignore` file is strictly configured to ignore all data files (`finance.json`, `notes.json`, `changes.json`) and environment variables (`.env`). Your data never leaves your machine.
+
+---
+<div align="center">
+  <i>Built for privacy. Built for peace of mind.</i>
+</div>
