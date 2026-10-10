@@ -6,10 +6,12 @@ const fmtD = s => { if (!s) return '–'; const d = new Date(s + 'T00:00:00'); r
 const fmtS = s => { if (!s) return '–'; const d = new Date(s + 'T00:00:00'); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
 const pct = n => Math.max(0, Math.min(100, n || 0));
 let S = null, charts = [], calMonth = null, TBL = {}, SORT = {}, projCache = null;
-const PAGES = [
-  ['dashboard', 'Dashboard', 'speedometer2'], ['analytics', 'Analytics', 'graph-up-arrow'], ['calendar', 'Calendar', 'calendar3'], ['bills', 'Bills', 'receipt'], ['debts', 'Debts', 'credit-card-2-front'],
-  ['accounts', 'Accounts & Income', 'bank'], ['transactions', 'Transactions', 'cash-stack'], ['goals', 'Goals & Savings', 'piggy-bank'],
-  ['business', 'Business Plan', 'pc-display'], ['notes', 'Notes & Changes', 'journal-text']];
+const NAV_GROUPS = [
+  { name: 'Core', pages: [['dashboard', 'Dashboard', 'speedometer2'], ['analytics', 'Analytics', 'graph-up-arrow'], ['calendar', 'Calendar', 'calendar3']] },
+  { name: 'Tracking', pages: [['bills', 'Bills', 'receipt'], ['debts', 'Debts', 'credit-card-2-front'], ['accounts', 'Accounts & Income', 'bank'], ['transactions', 'Transactions', 'cash-stack']] },
+  { name: 'Planning', pages: [['goals', 'Goals & Savings', 'piggy-bank'], ['business', 'Business Plan', 'pc-display'], ['notes', 'Notes & Changes', 'journal-text']] }
+];
+const PAGES = NAV_GROUPS.flatMap(g => g.pages);
 
 async function api(path, method = 'GET', body) {
   const r = await fetch(path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
@@ -86,7 +88,12 @@ const money = { callbacks: { label: c => ` ${c.dataset.label || c.label}: ${fmt(
 const canvas = (id, cls = '') => `<div class="chart-box ${cls}"><canvas id="${id}"></canvas></div>`;
 
 function route() { return (location.hash || '#/dashboard').replace('#/', '') || 'dashboard'; }
-function buildNav() { $('#nav').innerHTML = PAGES.map(([k, l, i]) => `<li><a class="nav-link" href="#/${k}" data-k="${k}"><i class="bi bi-${i}"></i>${l}</a></li>`).join(''); }
+function buildNav() { 
+  $('#nav').innerHTML = NAV_GROUPS.map(g => 
+    `<li class="nav-item mt-3 mb-1"><span class="small text-uppercase text-secondary fw-bold ms-3">${g.name}</span></li>` + 
+    g.pages.map(([k, l, i]) => `<li><a class="nav-link" href="#/${k}" data-k="${k}"><i class="bi bi-${i}"></i>${l}</a></li>`).join('')
+  ).join(''); 
+}
 async function refresh() { S = await api('/api/state'); projCache = null; render(); }
 function render() {
   if (!S) return; const r = route(); killCharts(); TBL = {};
@@ -258,9 +265,17 @@ function alertsHtml(al) {
   const count = al.length;
   const hasDanger = al.some(a => a.level === 'danger');
   const hasWarning = al.some(a => a.level === 'warning');
-  const btnClass = count === 0 ? 'btn-outline-success' : (hasDanger ? 'btn-danger' : (hasWarning ? 'btn-warning' : 'btn-info'));
-  const text = count === 0 ? 'No alerts' : `${count} Notification${count > 1 ? 's' : ''}`;
-  return `<div class="mb-3 d-flex justify-content-end"><button class="btn ${btnClass}" onclick="A.showAlerts()"><i class="bi bi-bell-fill"></i> ${text}</button></div>`;
+  const dotColor = count === 0 ? 'bg-success' : (hasDanger ? 'bg-danger' : (hasWarning ? 'bg-warning' : 'bg-primary'));
+  const text = count === 0 ? 'All clear' : `${count} update${count > 1 ? 's' : ''}`;
+  
+  return `<div class="mb-4 d-flex justify-content-end align-items-center">
+    <button class="btn btn-sm btn-outline-secondary position-relative px-3 rounded-pill d-flex align-items-center fw-medium" onclick="A.showAlerts()" style="background: var(--bs-tertiary-bg); border-color: var(--bs-border-color);">
+      <i class="bi bi-bell me-2"></i> ${text}
+      <span class="position-absolute top-0 start-100 translate-middle p-1 ${dotColor} border border-dark rounded-circle">
+        <span class="visually-hidden">Alerts</span>
+      </span>
+    </button>
+  </div>`;
 }
 function levelTile(label, cross, thr, color, icon) {
   let main, sub;
@@ -299,10 +314,9 @@ function pDashboard(el) {
           <div class="col-6"><label class="form-label small text-secondary mb-1">Start Date</label><input type="date" id="calc_start" class="form-control form-control-sm" value="${d.today}" onchange="updateBudgetCalc()"></div>
           <div class="col-6"><label class="form-label small text-secondary mb-1">End Date</label><input type="date" id="calc_end" class="form-control form-control-sm" value="${dl.horizon}" onchange="updateBudgetCalc()"></div>
           
-          <div class="col-6 col-md-3"><label class="form-label small text-secondary mb-1">Current Cash</label><input type="number" id="calc_cash" class="form-control form-control-sm" value="${d.cash}" oninput="updateBudgetCalc()"></div>
-          <div class="col-6 col-md-3"><label class="form-label small text-secondary mb-1">Additional Income</label><input type="number" id="calc_inc" class="form-control form-control-sm" value="0" oninput="updateBudgetCalc()"></div>
-          <div class="col-6 col-md-3"><label class="form-label small text-secondary mb-1">Upcoming Bills</label><input type="number" id="calc_bills" class="form-control form-control-sm" value="${dl.bills_in_horizon}" oninput="updateBudgetCalc()"></div>
-          <div class="col-6 col-md-3"><label class="form-label small text-secondary mb-1">Emergency Reserve</label><input type="number" id="calc_res" class="form-control form-control-sm" value="${dl.reserve}" oninput="updateBudgetCalc()"></div>
+          <div class="col-6 col-md-4"><label class="form-label small text-secondary mb-1">Current Cash</label><input type="number" id="calc_cash" class="form-control form-control-sm" value="${d.cash}" oninput="updateBudgetCalc()"></div>
+          <div class="col-6 col-md-4"><label class="form-label small text-secondary mb-1">Upcoming Bills</label><input type="number" id="calc_bills" class="form-control form-control-sm" value="${dl.bills_in_horizon}" oninput="updateBudgetCalc()"></div>
+          <div class="col-6 col-md-4"><label class="form-label small text-secondary mb-1">Emergency Reserve</label><input type="number" id="calc_res" class="form-control form-control-sm" value="${dl.reserve}" oninput="updateBudgetCalc()"></div>
           
           <div class="col-6"><label class="form-label small text-secondary mb-1">Daily Essentials</label><input type="number" id="calc_assump" class="form-control form-control-sm" value="${dl.assumption}" oninput="updateBudgetCalc()"></div>
           <div class="col-6">
@@ -345,7 +359,7 @@ window.updateBudgetCalc = () => {
   const cash = parseFloat($('#calc_cash').value) || 0;
   const bills = parseFloat($('#calc_bills').value) || 0;
   const res = parseFloat($('#calc_res').value) || 0;
-  const inc = parseFloat($('#calc_inc').value) || 0;
+  const inc = 0;
   const assump = parseFloat($('#calc_assump').value) || 0;
   const pct = parseFloat($('#calc_pct').value) || 80;
 
