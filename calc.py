@@ -65,6 +65,27 @@ def totals(d):
         alloc=dict(essentials_next30=essentials, emergency=emergency, business=business, flexible=rem),
         biz=dict(low=lo, high=hi, affordable=business >= lo, shortfall_low=max(need_lo - cash, 0),
                  note="Needs confirmed income + full emergency fund first" if not income_confirmed else ""))
+def _monthly_amt(i):
+    a = float(i.get("amount") or 0); p = (i.get("period") or "monthly").lower()
+    return a * 52 / 12 if p == "weekly" else a * 26 / 12 if p == "biweekly" else 0 if p == "one-time" else a
+def household_totals(d, daily=0, include_partner=None):
+    """Totals with and without partner income. Partner income counts only if enabled AND confirmed (and > 0).
+    include_partner=None uses partner.enabled; True/False overrides (what-if). daily = daily food/transport assumption."""
+    p = d.get("partner") or {}
+    
+    own = sum(_monthly_amt(i) for i in d.get("income", []) if i.get("confirmed") and i.get("owner", "mine") == "mine")
+    p_inc = sum(_monthly_amt(i) for i in d.get("income", []) if i.get("confirmed") and i.get("owner") == "partner")
+    
+    enabled = bool(p.get("enabled")) if include_partner is None else bool(include_partner)
+    counted = enabled and p_inc > 0
+    m = p_inc
+
+    fixed = monthly_fixed(d); cash = sum(a["balance"] for a in d["accounts"])
+    def blk(inc):
+        net = inc - fixed - daily * 30
+        return dict(income=inc, fixed=fixed, daily_spend=daily * 30, net_monthly=net, runway_days=None if net >= 0 else cash / (-net / 30))
+    return dict(partner_enabled=enabled, partner_confirmed=p_inc > 0, partner_counted=counted, partner_monthly=m if counted else 0,
+                cash=cash, without_partner=blk(own), with_partner=blk(own + m), active=blk(own + (m if counted else 0)))
 def cmd_summary(d):
     t = today(); s = totals(d)
     print(f"CURRENT MONEY ({t}) confirmed cash {php(s['cash'])} | reserved until next payday ({s['next_payday']}) {php(s['reserved'])} | unallocated {php(s['unallocated'])}")

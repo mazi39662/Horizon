@@ -101,3 +101,7 @@ pre.json{font-size:.72rem;max-height:160px;overflow:auto;margin:0;white-space:pr
 .mas-x{position:absolute;top:2px;right:6px;border:0;background:transparent;color:var(--bs-secondary-color);font-size:1.3rem;line-height:1}
 @media(max-width:575px){.mas-btn{width:72px;height:72px}.mascot.closed .mas-btn{width:56px;height:56px}.mascot{right:8px;bottom:8px}}
 .mas-nav{border:0;background:var(--bs-secondary-bg);color:var(--bs-body-color);border-radius:50%;width:22px;height:22px;line-height:1;padding:0;font-size:1rem}.mas-nav:hover{background:var(--bs-primary);color:#fff}
+
+#ver-badge{position:fixed;top:8px;right:14px;z-index:1060;background:#198754;color:#fff;border-radius:2rem;padding:.25rem .8rem;font-size:.78rem;box-shadow:0 2px 8px rgba(0,0,0,.3);pointer-events:auto}#ver-badge.old{background:#dc3545}
+@media(max-width:991px){#ver-badge{top:auto;bottom:8px;left:8px;right:auto}}
+.pill-new{background:#f59f00;color:#212529;font-size:.65rem;font-weight:700;border-radius:1rem;padding:.1rem .5rem;margin-left:.4rem;vertical-align:middle}

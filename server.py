@@ -38,6 +38,7 @@ def normalize(d):
     d.setdefault("business", {}); b = d["business"]
     for k, v in (("pc_price", 0), ("pcs_min", 3), ("pcs_max", 4), ("room_build", 0)): b.setdefault(k, v)
     d.setdefault("reminders", {})
+    pt = d.setdefault("partner", {}); [pt.setdefault(k, v) for k, v in (("enabled", False), ("name", "Partner"), ("monthly_income", 0), ("pay_weekday", "Friday"), ("confirmed", False), ("notes", ""))]
     s = d.setdefault("settings", {})
     for k, v in DEFAULT_SETTINGS.items(): s.setdefault(k, v)
     for x in d["bills"] + d["debts"]:
@@ -106,6 +107,64 @@ def settings_vals(d):
                 critical=num("critical_threshold", fixed),
                 warning_auto=s.get("warning_threshold") in (None, ""), critical_auto=s.get("critical_threshold") in (None, ""), fixed=fixed)
 
+WDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+def gets_income(inc, dt):
+    if not inc.get("confirmed"): return False
+    st_str = inc.get("start_date")
+    if st_str:
+        try:
+            st = date.fromisoformat(st_str)
+            if dt < st: return False
+        except ValueError: st = today()
+    else:
+        st = today()
+        if dt < st: return False
+
+    period = inc.get("period", "monthly")
+    if period == "one-time":
+        return dt == st
+    elif period == "monthly":
+        return dt.day == st.day if st else False
+    elif period == "weekly":
+        wd = str(inc.get("pay_weekday") or "").lower()
+        if wd in WDAYS: return dt.weekday() == WDAYS.index(wd)
+        return False
+    elif period == "biweekly":
+        return (dt - st).days % 14 == 0
+    return False
+
+def partner_info(d):
+    p = d.get("partner") or {}
+    en = bool(p.get("enabled"))
+    
+    p_incomes = [i for i in d.get("income", []) if i.get("owner") == "partner" and i.get("confirmed")]
+    m = sum(C._monthly_amt(i) for i in p_incomes)
+    cf = m > 0
+    return dict(enabled=en, confirmed=cf, counted=en and cf, monthly=m, weekly=m * 12 / 52,
+                name=p.get("name") or "Partner", notes=p.get("notes") or "", 
+                p_incomes=p_incomes)
+def is_mine(i): return (i.get("owner") or "mine") == "mine"
+def is_biz(i): return i.get("owner") == "business"
+
+def inflow_on(d, pi, dt):
+    """SINGLE SOURCE for scheduled income landing on date dt: (mine, partner, business). 'mine' = confirmed owner-mine incomes
+    (never 'business', never unconfirmed). partner part is raw; callers add it only when pi['counted']."""
+    mine = sum(float(i.get("amount") or 0) for i in d.get("income", []) if is_mine(i) and gets_income(i, dt))
+    part = sum(float(i.get("amount") or 0) for i in pi.get("p_incomes", []) if gets_income(i, dt))
+    biz = sum(float(i.get("amount") or 0) for i in d.get("income", []) if is_biz(i) and gets_income(i, dt))
+    return mine, part, biz
+
+def inflow_between(d, pi, start, end):
+    """Income landing in (start, end]: (mine, partner_raw, business)."""
+    m = p = bz = 0.0; dt = start + timedelta(days=1)
+    while dt <= end:
+        a, b, z = inflow_on(d, pi, dt); m += a; p += b; bz += z; dt += timedelta(days=1)
+    return m, p, bz
+
+def partner_paydays(pi, start, end):
+    return 0 # unused
+
 def projection(d, days=90, hypotheticals=None):
     t = today(); S = settings_vals(d); cash = sum(a["balance"] for a in d["accounts"])
     its = my_items(d); oc = occ(d, t, days + 31, its); by = {}
@@ -117,7 +176,7 @@ def projection(d, days=90, hypotheticals=None):
     ef = d["savings"]["emergency_fund"]; ef_t = S["fixed"] * d["savings"]["emergency_target_months"]
     gs = sum(float(g.get("saved") or 0) for g in d["goals"]); gt = sum(float(g.get("target") or 0) for g in d["goals"])
     
-    rows = []; c = cash; debt = debt0
+    rows = []; biz_cum = 0.0; c = cash; debt = debt0; pi = partner_info(d); cb = cash
     hypo_cum = {h["id"]: 0 for h in (hypotheticals or []) if h.get("enabled")}
     
     for i in range(days + 1):
@@ -128,7 +187,11 @@ def projection(d, days=90, hypotheticals=None):
         
         # Base cash no longer subtracts the daily assumption (it is moved to a hypothetical)
         spend = 0
-        c -= bills + spend; debt = max(debt - paid_debt, 0)
+        c -= bills + spend; cb -= bills + spend; debt = max(debt - paid_debt, 0)
+        if i > 0:
+            im, ip, ib_ = inflow_on(d, pi, dt)
+            c += im + ib_; cb += im + ib_; biz_cum += ib_
+            if pi["counted"]: c += ip
         
         hypos_out = {}
         if hypotheticals:
@@ -150,10 +213,10 @@ def projection(d, days=90, hypotheticals=None):
                         else: hypo_cum[hid] -= float(h.get("amount", 0))
                 hypos_out[hid] = round(c + hypo_cum[hid], 2)
 
-        rows.append(dict(date=str(dt), cash=round(c, 2), bills=round(bills, 2), daily=spend, debt=round(debt, 2),
+        rows.append(dict(date=str(dt), cash=round(c, 2), cash_base=round(cb, 2), biz_income=round(biz_cum, 2), bills=round(bills, 2), daily=spend, debt=round(debt, 2),
                          emergency=ef, emergency_target=round(ef_t, 2), goals_saved=gs, goals_target=gt, hypos=hypos_out))
     th = dict(warning=S["warning"], critical=S["critical"], zero=0.0, business=d["business"]["pc_price"] * d["business"]["pcs_min"] + d["business"]["room_build"])
-    return dict(series=rows, thresholds=th, start=str(t), daily=S["daily"], has_hypos=bool(hypo_cum))
+    return dict(series=rows, thresholds=th, start=str(t), daily=S["daily"], has_hypos=bool(hypo_cum), partner_counted=pi["counted"])
 def crossing(rows, thr):
     for i, r in enumerate(rows):
         if r["cash"] < thr: return dict(date=r["date"], days=i, already=(i == 0))
@@ -203,12 +266,20 @@ def dashboard(d):
     horizon_days = max((S["horizon"] - t).days, 1)
     due_h = [o for o in occ(d, t, max((S["horizon"] - t).days, 0)) if o["due"] <= S["horizon"]]
     bills_h = sum(o["amount"] for o in due_h)
-    free = cash - bills_h - S["reserve"]; per_day = free / horizon_days
+    pi = partner_info(d); 
+    
+    mine_h, infl_all, biz_h = inflow_between(d, pi, t, S["horizon"]); mine_h += biz_h  # own + business income (both always counted when confirmed)
+    infl = infl_all if pi["counted"] else 0
+    per_day_base = (cash + mine_h - bills_h - S["reserve"]) / horizon_days
+    free = cash + mine_h + infl - bills_h - S["reserve"]; per_day = free / horizon_days
+    HH = C.household_totals(d, S["daily"])
     sp = spent_today(d); allowed_today = (free + sp) / horizon_days
     proj = projection(d, 365); rows = proj["series"]
     warn = crossing(rows, S["warning"]); crit = crossing(rows, S["critical"]); zero = crossing(rows, 0); biz_thr = proj["thresholds"]["business"]; biz_c = crossing(rows, biz_thr)
     b30 = sum(r["amount"] for r in occ(d, t, 30))
-    burn = b30 / 30 + S["daily"]
+    m30, p30, z30 = inflow_between(d, pi, t, t + timedelta(days=30)); m30 += z30
+    burn_gross = b30 / 30 + S["daily"]
+    burn = max(burn_gross - (m30 + (p30 if pi["counted"] else 0)) / 30, 0)  # net of scheduled income
     ib = d["business"]; lo = ib["pc_price"] * ib["pcs_min"] + ib["room_build"]; hi = ib["pc_price"] * ib["pcs_max"] + ib["room_build"]
     avail = max(cash - b30 - S["reserve"], 0)
     pcs = int(max((avail - ib["room_build"]) // ib["pc_price"], 0)) if ib["pc_price"] else 0
@@ -217,7 +288,7 @@ def dashboard(d):
     if free < 0: alerts.append(dict(level="danger", text=f"Cash does not cover bills due until {S['horizon']} (short by {php(-free)}).", source="computed"))
     elif per_day < S["daily"]: alerts.append(dict(level="warning", text=f"Safe-to-spend {php(per_day)}/day is below your daily food & transport assumption ({php(S['daily'])}).", source="computed"))
     if sp > allowed_today and allowed_today > 0: alerts.append(dict(level="warning", text=f"Spent today {php(sp)} exceeds today's allowance {php(allowed_today)}.", source="computed"))
-    runway_m = cash / (burn * 30) if burn else 0
+    runway_m = cash / (burn * 30) if burn else 99
     if runway_m < 1: alerts.append(dict(level="danger", text=f"Runway only {runway_m*30:.0f} days at current burn ({php(burn)}/day).", source="computed"))
     elif runway_m < 2: alerts.append(dict(level="warning", text=f"Runway {runway_m*30:.0f} days at current burn ({php(burn)}/day).", source="computed"))
     for o in occ(d, t, 3):
@@ -227,6 +298,8 @@ def dashboard(d):
     elif crit and crit["already"]: alerts.append(dict(level="danger", text="Cash is already below the CRITICAL level.", source="computed"))
     if warn and warn["already"]: alerts.append(dict(level="warning", text="Cash is already below the WARNING level.", source="computed"))
     elif warn and warn["days"] <= 30: alerts.append(dict(level="warning", text=f"WARNING level ({php(S['warning'])}) is reached on {warn['date']} ({warn['days']} days).", source="computed"))
+    if pi["enabled"] and not pi["counted"]: alerts.append(dict(level="info", text="Partner income is switched on but not confirmed (or ₱0), so it is NOT counted.", source="computed"))
+    elif pi["counted"]: alerts.append(dict(level="info", text=f"Partner income ({php(pi['monthly'])}/month) is included in projections and the daily budget.", source="computed"))
     if not any(i.get("confirmed") for i in d["income"]): alerts.append(dict(level="info", text="No confirmed income. Pending job income is NOT counted as cash.", source="computed"))
     lv = {"danger": 0, "warning": 1, "info": 2}; alerts.sort(key=lambda a: lv.get(a["level"], 3))
     if free < 0 or per_day < 0 or (crit and crit["days"] <= max((S["horizon"] - t).days, 1)): light = "red"
@@ -248,7 +321,10 @@ def dashboard(d):
         runway_days=round(cash / burn, 1) if burn else None, runway_months=round(runway_m, 2), fixed_monthly=S["fixed"],
         emergency=dict(fund=T["ef"], target=T["ef_target"], months=d["savings"]["emergency_target_months"]),
         alloc=T["alloc"], alerts=alerts, upcoming=up, last_updated=d.get("last_updated"), income_confirmed=any(i.get("confirmed") for i in d["income"]),
-        missing_info=d.get("missing_info", []))
+        missing_info=d.get("missing_info", []),
+        partner=dict(enabled=pi["enabled"], confirmed=pi["confirmed"], counted=pi["counted"], name=pi["name"], monthly=pi["monthly"], weekly=round(pi.get("weekly",0), 2), weekday=4,
+                     pay_weekday="", notes=pi["notes"], inflow_to_horizon=round(infl, 2), mine_inflow_to_horizon=round(mine_h, 2), business_inflow_to_horizon=round(biz_h, 2), per_day_without=round(per_day_base, 2),
+                     per_day_with=round((cash + mine_h + infl_all - bills_h - S["reserve"]) / horizon_days, 2), household=HH))
 
 def calendar_view(d, ym):
     t = today()
@@ -358,7 +434,7 @@ SPEC = {
  "accounts": dict(name=lambda v: to_str(v, "name", True), balance=lambda v: to_num(v, "balance", True, ge0=False), confirmed=to_bool),
  "income": dict(name=lambda v: to_str(v, "name", True), amount=lambda v: to_num(v, "amount", True), period=lambda v: to_str(v, "period") or "monthly",
                 pay_weekday=lambda v: to_str(v, "pay_weekday"), status=lambda v: to_str(v, "status") or "pending", confirmed=to_bool,
-                start_date=lambda v: to_date(v, "start_date"), note=lambda v: to_str(v, "note", maxlen=500)),
+                start_date=lambda v: to_date(v, "start_date"), note=lambda v: to_str(v, "note", maxlen=500), owner=lambda v: to_str(v, "owner") or "mine"),
  "goals": dict(name=lambda v: to_str(v, "name", True), target=lambda v: to_num(v, "target", True), saved=lambda v: to_num(v, "saved") or 0,
                deadline=lambda v: to_date(v, "deadline"), note=lambda v: to_str(v, "note", maxlen=500)),
 }
@@ -391,6 +467,16 @@ def crud(entity, method, idx, body):
             for k in ("warning_threshold", "critical_threshold"):
                 if k in body: s[k] = to_num(body[k], k)
             commit(d, None, "update", "settings", "Updated budget settings", before, dict(s)); return state(load())
+        if entity == "partner":
+            if method != "PUT": raise ApiError("use PUT", 405)
+            before = dict(d["partner"]); p = d["partner"]
+            if "enabled" in body: p["enabled"] = to_bool(body["enabled"])
+            if "name" in body: p["name"] = to_str(body["name"], "name") or "Partner"
+            if "notes" in body: p["notes"] = to_str(body["notes"], "notes", maxlen=500)
+            
+            p_inc = sum(C._monthly_amt(i) for i in d.get("income", []) if i.get("owner") == "partner" and i.get("confirmed"))
+            counted = p["enabled"] and p_inc > 0
+            commit(d, None, "update", "partner", f"Partner income {'ON' if p['enabled'] else 'OFF'} ({php(p_inc)}/month, {'counted' if counted else 'not counted'})", before, dict(p)); return state(load())
         if entity == "savings":
             before = dict(d["savings"])
             if "emergency_fund" in body: d["savings"]["emergency_fund"] = to_num(body["emergency_fund"], "emergency_fund", True)
@@ -558,7 +644,7 @@ class H(BaseHTTPRequestHandler):
             if fp.endswith(".woff2"): ct = "font/woff2"
             with open(fp, "rb") as f: raw = f.read()
             self.send_response(200); self.send_header("Content-Type", ct + ("; charset=utf-8" if ct.startswith("text") or "javascript" in ct else ""))
-            self.send_header("Content-Length", str(len(raw))); self.send_header("Cache-Control", "no-cache"); self.end_headers()
+            self.send_header("Content-Length", str(len(raw))); self.send_header("Cache-Control", "no-store"); self.end_headers()
             if self.command != "HEAD": self.wfile.write(raw)
         except ApiError as e: self._send(e.code, {"error": str(e)})
         except Exception as e:
@@ -578,6 +664,7 @@ class H(BaseHTTPRequestHandler):
                 ch = read_json(CHG, []); return dict(changes=ch[::-1][:int((q.get("limit") or ["200"])[0])], total=len(ch), file=CHG)
             if route == "notes": return dict(notes=read_json(NOTES, [])[::-1])
             if route in ("bills", "debts"): return item_views(d, route[:-1])
+            if route == "partner": return d["partner"]
             if route in ("accounts", "income", "goals", "transactions"): return d[route]
             if route == "export": return d
             raise ApiError("not found", 404)
@@ -591,7 +678,7 @@ class H(BaseHTTPRequestHandler):
         if len(parts) > 1:
             try: idx = int(parts[1])
             except ValueError: raise ApiError("bad index")
-        if (m == "POST" and idx is not None) or (m in ("PUT", "DELETE") and idx is None and ent not in ("settings", "savings", "business")): raise ApiError("bad route")
+        if (m == "POST" and idx is not None) or (m in ("PUT", "DELETE") and idx is None and ent not in ("settings", "savings", "business", "partner")): raise ApiError("bad route")
         return crud(ent, m, idx, body)
 
 def free_port(start):

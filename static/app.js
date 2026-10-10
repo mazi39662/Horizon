@@ -99,6 +99,7 @@ function render() {
   if (!S) return; const r = route(); killCharts(); TBL = {};
   document.querySelectorAll('#nav .nav-link').forEach(a => a.classList.toggle('active', a.dataset.k === r));
   const d = S.dashboard, dl = d.daily;
+  $('#ver-v').textContent = window.APP_VERSION || ''; $('#ver-t').textContent = '· ' + ((d.last_updated || '').replace('T', ' ').slice(0, 16)) + (d.partner ? '' : ' · server OLD – restart'); $('#ver-badge').classList.toggle('old', !d.partner);
   $('#side-status').innerHTML = `<span class="light-dot" style="background:${{ green: '#2fb872', amber: '#f5a623', red: '#f0506e' }[dl.light]}"></span> Budget status: <b>${dl.light.toUpperCase()}</b><div>Updated ${esc((d.last_updated || '').replace('T', ' ').slice(0, 16))}</div>`;
   const fn = { dashboard: pDashboard, calendar: pCalendar, bills: pBills, debts: pDebts, accounts: pAccounts, transactions: pTx, goals: pGoals, analytics: pAnalytics, business: pBusiness, notes: pNotes }[r] || pDashboard;
   $('#app').innerHTML = `<h2 class="h4 mb-3">${esc((PAGES.find(p => p[0] === r) || PAGES[0])[1])} <small class="text-secondary fs-6 ms-2">${esc(fmtD(d.today))}</small></h2><div id="page"></div>`;
@@ -158,6 +159,7 @@ function incForm(x) {
   const e = !!x;
   openForm({
     title: e ? 'Edit income source' : 'Add income source', fields: [{ name: 'name', label: 'Name', value: x?.name, required: true }, { name: 'amount', label: 'Amount (₱)', type: 'number', value: x?.amount, required: true, col: 6 },
+    { name: 'owner', label: 'Whose money is it?', type: 'select', options: [['mine', 'Mine'], ['partner', 'Partner'], ['business', 'Business']], value: x?.owner || 'mine', col: 6 },
     { name: 'period', label: 'Period', type: 'select', options: ['monthly', 'weekly', 'biweekly', 'one-time'], value: x?.period || 'monthly', col: 6 },
     { name: 'pay_weekday', label: 'Pay weekday', type: 'select', options: ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], value: x?.pay_weekday || '', col: 6 },
     { name: 'start_date', label: 'Start date', type: 'date', value: x?.start_date || '', col: 6 }, { name: 'status', label: 'Status', type: 'select', options: ['pending', 'confirmed', 'ended'], value: x?.status || 'pending', col: 6 },
@@ -214,6 +216,11 @@ window.A = {
   addGoal: () => goalForm(), editGoal: i => goalForm(S.goals[i]), delGoal: i => del('Goal', '/api/goals/' + i, `Delete goal <b>${esc(S.goals[i].name)}</b>?`),
   addAlert: () => openForm({ title: 'Add alert', fields: [{ name: 'text', label: 'Alert text', required: true }], submit: d => mutate('/api/alerts', 'POST', d, 'Alert added') }),
   delAlert: i => del('Alert', '/api/alerts/' + i, 'Delete this alert?'),
+  partnerToggle: on => mutate('/api/partner', 'PUT', { enabled: on }, on ? 'Partner income switched ON' : 'Partner income switched OFF').catch(e => toast(e.message, 'danger')),
+  partner: () => { const p = S.dashboard.partner; openForm({ title: 'Partner income', fields: [
+    { name: 'enabled', label: 'Include partner income', type: 'checkbox', value: p.enabled }, { name: 'name', label: 'Partner name', value: p.name, col: 12 },
+    { name: 'notes', label: 'Notes', type: 'textarea', value: p.notes }],
+    submit: d => mutate('/api/partner', 'PUT', d, 'Partner details saved') }); },
   savings: () => openForm({ title: 'Emergency fund', fields: [{ name: 'emergency_fund', label: 'Emergency fund saved (₱)', type: 'number', value: S.savings.emergency_fund, required: true, col: 6 }, { name: 'emergency_target_months', label: 'Target (months of bills)', type: 'number', value: S.savings.emergency_target_months, required: true, col: 6 }], submit: d => mutate('/api/savings', 'PUT', d, 'Emergency fund updated') }),
   business: () => openForm({ title: 'Business plan', fields: [{ name: 'name', label: 'Business name', value: S.business.name, required: true }, { name: 'pc_price', label: 'Price per PC (₱)', type: 'number', value: S.business.pc_price, required: true, col: 6 }, { name: 'room_build', label: 'Room build cost (₱)', type: 'number', value: S.business.room_build, required: true, col: 6 }, { name: 'pcs_min', label: 'Minimum PCs', type: 'number', value: S.business.pcs_min, required: true, col: 6 }, { name: 'pcs_max', label: 'Maximum PCs', type: 'number', value: S.business.pcs_max, required: true, col: 6 }], submit: d => mutate('/api/business', 'PUT', d, 'Business plan updated') }),
   day: showDay, month: m => { calMonth = m; render(); },
@@ -289,11 +296,32 @@ function thLines(s, th) {
   return [l('Warning level', th.warning, COL.amber), l('Critical level', th.critical, COL.red), l('Business start', th.business, COL.purple)];
 }
 async function getProj(useHypo = false) { if (!useHypo && projCache) return projCache; const p = useHypo ? await api('/api/projection?days=90', 'POST', { hypotheticals: HYPO }) : await api('/api/projection?days=90'); if (!useHypo) projCache = p; return p; }
+function restartBanner() { return `<div class="alert alert-danger d-flex gap-2 align-items-center"><i class="bi bi-exclamation-octagon-fill"></i><div><b>Restart run_dashboard.bat to enable partner income.</b> The dashboard server is still running the old version (close its black window, then double-click run_dashboard.bat again).</div></div>`; }
+function partnerCard(d) {
+  const p = d.partner;
+  const status = p.counted ? pill('Counted in totals', 'success') : p.enabled ? pill('On, but not confirmed – NOT counted', 'warning') : pill('Off', 'secondary');
+  return `<div class="row g-3 mb-3"><div class="col-12">${card('<i class="bi bi-people"></i> Partner income', `
+    <div class="d-flex flex-wrap align-items-center gap-3"><div class="form-check form-switch fs-5 mb-0"><input class="form-check-input" type="checkbox" id="partner_sw" ${p.enabled ? 'checked' : ''} onchange="A.partnerToggle(this.checked)"><label class="form-check-label" for="partner_sw">Include partner income</label></div>${status}
+      <span class="text-secondary small">${esc(p.name)} · ${fmt(p.monthly)}/month · ${p.confirmed ? 'confirmed' : 'unconfirmed'}</span><button class="btn btn-sm btn-outline-primary ms-auto" onclick="A.partner()"><i class="bi bi-pencil"></i> Edit partner</button></div>
+    ${p.notes ? `<div class="small text-secondary mt-2">${esc(p.notes)}</div>` : ''}
+    <div class="small text-secondary mt-2">Partner income is now managed in the <b>Income sources</b> table (set "Whose money is it?" to Partner). It only counts when switched on here <b>and</b> confirmed there.</div>`)}</div></div>`;
+}
+
+function partnerDashboardDetails(d) {
+  if (!d.partner) return '';
+  const p = d.partner, h = p.household;
+  return `<div class="row g-3 mb-3"><div class="col-12">${card('<i class="bi bi-people"></i> Partner income details', `
+    <div class="row g-3"><div class="col-6 col-xl-3">${kpi('Household income / month', fmt(h.active.income), 'people', COL.green, 'your confirmed income' + (p.counted ? ' + partner' : ''))}</div>
+      <div class="col-6 col-xl-3">${kpi('Net monthly', fmt(h.active.net_monthly), 'graph-up', h.active.net_monthly >= 0 ? COL.green : COL.red, `income − bills − daily spend · without partner ${fmt(h.without_partner.net_monthly)}`)}</div>
+      <div class="col-6 col-xl-3">${kpi('Safe / day with partner', fmt(p.per_day_with), 'calendar-check', COL.blue, `without partner ${fmt(p.per_day_without)}${p.counted ? '' : ' (not counted yet)'}`)}</div>
+      <div class="col-6 col-xl-3">${kpi('Partner adds by horizon', fmt(p.inflow_to_horizon), 'plus-circle', COL.purple, `total confirmed until ${fmtS(d.daily.horizon)}`)}</div></div>
+  `)}</div></div>`;
+}
 function pDashboard(el) {
   const d = S.dashboard, dl = d.daily, lv = d.levels, b = d.business;
   const lightTxt = { green: 'ON TRACK', amber: 'WATCH SPENDING', red: 'DANGER' }[dl.light];
   const used = dl.allowed_today > 0 ? dl.spent_today / dl.allowed_today * 100 : (dl.spent_today ? 100 : 0);
-  el.innerHTML = alertsHtml(d.alerts) + `
+  el.innerHTML = alertsHtml(d.alerts) + (!d.partner ? restartBanner() : partnerDashboardDetails(d)) + `
   <div class="row g-3 mb-3">
     <div class="col-12 col-xl-4"><div class="card hero ${dl.light} h-100" id="hero_card"><div class="card-body d-flex flex-column">
       <div class="d-flex justify-content-between"><span><span class="light"></span><b id="hero_status">${lightTxt}</b></span><button class="btn btn-sm btn-light" onclick="A.settings()"><i class="bi bi-sliders"></i> Edit budget</button></div>
@@ -308,7 +336,7 @@ function pDashboard(el) {
       <div class="col-6 col-lg-3" id="kpi_cash">${kpi('Cash now', fmt(d.cash), 'wallet2', COL.blue, S.accounts.map(a => esc(a.name) + ' ' + fmt(a.balance)).join(' · '))}</div>
       <div class="col-6 col-lg-3" id="kpi_bills">${kpi('Reserved for bills', fmt(d.reserved), 'lock', COL.amber, `until payday ${fmtS(d.next_payday)}`)}</div>
       <div class="col-6 col-lg-3" id="kpi_free">${kpi('Left for daily spending', fmt(d.unallocated), 'basket', COL.green, 'cash − reserved bills')}</div>
-      <div class="col-6 col-lg-3">${kpi('Runway', d.runway_days != null ? Math.round(d.runway_days) + ' days' : '–', 'hourglass-split', d.runway_days < 30 ? COL.red : d.runway_days < 60 ? COL.amber : COL.green, `burn ${fmt(lv.burn)}/day`)}</div>
+      <div class="col-6 col-lg-3">${kpi('Runway', d.runway_days != null ? Math.round(d.runway_days) + ' days' : '∞ (income covers spend)', 'hourglass-split', d.runway_days != null && d.runway_days < 30 ? COL.red : d.runway_days < 60 ? COL.amber : COL.green, `burn ${fmt(lv.burn)}/day`)}</div>
       <div class="col-12">${card('<i class="bi bi-calculator"></i> Date-Adjustable Daily Budget Calculator', `
         <div class="row g-3 mb-3">
           <div class="col-6"><label class="form-label small text-secondary mb-1">Start Date</label><input type="date" id="calc_start" class="form-control form-control-sm" value="${d.today}" onchange="updateBudgetCalc()"></div>
@@ -359,7 +387,8 @@ window.updateBudgetCalc = () => {
   const cash = parseFloat($('#calc_cash').value) || 0;
   const bills = parseFloat($('#calc_bills').value) || 0;
   const res = parseFloat($('#calc_res').value) || 0;
-  const inc = 0;
+  const pp = S.dashboard.partner; let inc = 0;
+  if (pp && pp.counted) { for (let dt = new Date(start.getTime() + 864e5); dt <= end; dt = new Date(dt.getTime() + 864e5)) if ((dt.getUTCDay() + 6) % 7 === pp.weekday) inc += pp.weekly; }
   const assump = parseFloat($('#calc_assump').value) || 0;
   const pct = parseFloat($('#calc_pct').value) || 80;
 
@@ -371,6 +400,7 @@ window.updateBudgetCalc = () => {
 
   $('#calc_results').innerHTML = `
     <div class="table-responsive"><table class="table table-sm mb-0 tbl-calc"><tbody>
+      ${inc ? `<tr><td>Partner income in period</td><td class="num text-success">+${fmt(inc)}</td></tr>` : ''}
       <tr><td>Available Budget</td><td class="num">${fmt(avail)}</td></tr>
       <tr><td>Maximum to Spend</td><td class="num">${fmt(maxSpend)}/day</td></tr>
       <tr class="fw-bold table-active"><td>Safe to Spend</td><td class="num">${fmt(safeSpend)}/day <span class="${safeSpend >= assump ? 'text-success' : 'text-danger'}">(${safeSpend >= assump ? 'covers' : 'BELOW'} ${fmt(assump)})</span></td></tr>
@@ -471,14 +501,15 @@ function pDebts(el) {
 }
 
 function pAccounts(el) {
-  const tot = sum(S.accounts, a => a.balance), em = S.dashboard.emergency;
-  el.innerHTML = `<div class="row g-3 mb-3"><div class="col-md-4">${kpi('Total cash', fmt(tot), 'bank', COL.blue, S.accounts.length + ' accounts')}</div><div class="col-md-4">${kpi('Confirmed income / month', fmt(sum(S.income.filter(i => i.confirmed), i => i.amount)), 'cash-coin', COL.green, 'pending income not counted')}</div><div class="col-md-4">${kpi('Pending income / month', fmt(sum(S.income.filter(i => !i.confirmed), i => i.amount)), 'hourglass-split', COL.amber, 'unconfirmed')}</div></div>
+  const d = S.dashboard;
+  const tot = sum(S.accounts, a => a.balance), em = d.emergency;
+  el.innerHTML = (d.partner ? partnerCard(d) : restartBanner()) + `<div class="row g-3 mb-3"><div class="col-md-4">${kpi('Total cash', fmt(tot), 'bank', COL.blue, S.accounts.length + ' accounts')}</div><div class="col-md-4">${kpi('Confirmed income / month', fmt(sum(S.income.filter(i => i.confirmed), i => i.amount)), 'cash-coin', COL.green, 'pending income not counted')}</div><div class="col-md-4">${kpi('Pending income / month', fmt(sum(S.income.filter(i => !i.confirmed), i => i.amount)), 'hourglass-split', COL.amber, 'unconfirmed')}</div></div>
   <div class="row g-3"><div class="col-12 col-xl-6">${card('Accounts', `<button class="btn btn-primary btn-sm mb-2" onclick="A.addAcct()"><i class="bi bi-plus-lg"></i> Add account</button>` + table('acc', [
     { k: 'name', label: 'Account', r: r => `<b>${esc(r.name)}</b>` }, { k: 'balance', label: 'Balance', num: true, r: r => fmt(r.balance), t: rs => fmt(sum(rs, r => r.balance)) },
     { k: 'share', label: 'Share', v: r => tot ? r.balance / tot * 100 : 0, r: r => prog(tot ? r.balance / tot * 100 : 0, 'info') }, { k: 'confirmed', label: 'Status', r: r => r.confirmed ? pill('confirmed', 'success') : pill('unconfirmed', 'warning') },
     { k: 'a', label: '', nosort: true, r: r => crudActs('editAcct', 'delAcct', r.idx) }], S.accounts, { totals: true }))}</div>
   <div class="col-12 col-xl-6">${card('Income sources', `<button class="btn btn-primary btn-sm mb-2" onclick="A.addInc()"><i class="bi bi-plus-lg"></i> Add income</button>` + table('inc', [
-    { k: 'name', label: 'Source', r: r => `<b>${esc(r.name)}</b>` }, { k: 'amount', label: 'Amount', num: true, r: r => fmt(r.amount) }, { k: 'period', label: 'Period' },
+    { k: 'name', label: 'Source', r: r => `<b>${esc(r.name)}</b> <span class="badge bg-secondary ms-1">${esc(r.owner || 'mine')}</span>` }, { k: 'amount', label: 'Amount', num: true, r: r => fmt(r.amount) }, { k: 'period', label: 'Period' },
     { k: 'start_date', label: 'Start', r: r => fmtD(r.start_date) }, { k: 'pay_weekday', label: 'Payday' }, { k: 'confirmed', label: 'Status', r: r => r.confirmed ? pill('confirmed', 'success') : pill(r.status || 'pending', 'warning') },
     { k: 'note', label: 'Notes', r: r => `<small class="text-secondary">${esc(r.note)}</small>` }, { k: 'a', label: '', nosort: true, r: r => crudActs('editInc', 'delInc', r.idx) }], S.income, { empty: 'No income sources.' }))}</div>
   <div class="col-12 col-xl-6">${card('Emergency fund', `<div class="d-flex justify-content-between"><span>${fmt(em.fund)} saved</span><span>target ${fmt(em.target)} (${esc(em.months)} months of bills)</span></div>${prog(em.target ? em.fund / em.target * 100 : 0, 'success')}<button class="btn btn-sm btn-outline-primary mt-3" onclick="A.savings()"><i class="bi bi-pencil"></i> Edit emergency fund</button>`)}</div></div>`;
@@ -532,8 +563,8 @@ async function pNotes(el) {
     { k: 'timestamp', label: 'When', r: r => esc(r.timestamp.replace('T', ' ').slice(0, 19)) }, { k: 'action', label: 'Action', r: r => pill(r.action, bc[r.action] || 'secondary') }, { k: 'entity', label: 'Entity' },
     { k: 'summary', label: 'What changed', r: r => `${esc(r.summary)}<details><summary class="small text-secondary">before / after</summary><div class="row g-1"><div class="col-6"><pre class="json">${esc(JSON.stringify(r.before, null, 1))}</pre></div><div class="col-6"><pre class="json">${esc(JSON.stringify(r.after, null, 1))}</pre></div></div></details>` }], ch.changes, { empty: 'No changes yet.', sort: { k: 'timestamp', dir: -1 } }))}</div></div>`;
 }
-const LINES = [['cash', 'Cash balance', COL.blue, 'Cash'], ['debt', 'Total debt outstanding', COL.red, 'Debt'], ['emergency', 'Emergency fund', COL.green, 'Savings'], ['emergency_target', 'Emergency target', COL.green, 'Savings', 1], ['goals_saved', 'Goals saved', COL.teal, 'Goals'], ['goals_target', 'Goals target', COL.teal, 'Goals', 1]];
-let lineOn = { Cash: true, Debt: true, Savings: true, Goals: true, Thresholds: true }, projChart = null;
+const LINES = [['cash', 'Cash balance', COL.blue, 'Cash'], ['biz_income', 'Business income (cumulative)', COL.amber, 'Business'], ['debt', 'Total debt outstanding', COL.red, 'Debt'], ['emergency', 'Emergency fund', COL.green, 'Savings'], ['emergency_target', 'Emergency target', COL.green, 'Savings', 1], ['goals_saved', 'Goals saved', COL.teal, 'Goals'], ['goals_target', 'Goals target', COL.teal, 'Goals', 1]];
+let lineOn = { Cash: true, Business: true, Debt: true, Savings: true, Goals: true, Thresholds: true }, projChart = null;
 let HYPO = [];
 try { 
   const v = localStorage.getItem('hypo_v2');
@@ -553,6 +584,7 @@ async function drawProj() {
       ds.push({ label: 'What-if: ' + h.name, data: s.map(r => r.hypos[h.id]), borderColor: h.color || COL.pink, backgroundColor: (h.color || COL.pink) + '22', fill: false, tension: .15, pointRadius: 0, borderDash: [8, 3], borderWidth: 2 });
     });
   }
+  if (p.partner_counted) ds.push({ label: 'Cash WITHOUT partner income', data: s.map(r => r.cash_base), borderColor: COL.grey, fill: false, tension: .15, pointRadius: 0, borderDash: [3, 3], borderWidth: 2 });
   if (lineOn.Thresholds) ds.push(...thLines(s, p.thresholds), { label: 'Zero', data: s.map(() => 0), borderColor: '#888', pointRadius: 0, borderWidth: 1, borderDash: [2, 2] });
   projChart = mkChart('c_proj', { type: 'line', data: { labels: s.map(r => fmtS(r.date)), datasets: ds }, options: { interaction: { mode: 'index', intersect: false }, plugins: { tooltip: money, legend: { position: 'bottom' } }, scales: { y: { ticks: { callback: v => fmt(v) } }, x: { ticks: { maxTicksLimit: 15 } } } } });
 }
@@ -582,7 +614,7 @@ async function pAnalytics(el) {
   <div class="row g-3 mt-0"><div class="col-12 col-md-6 col-xl-4">${card('Spending by category (all outflows)', canvas('c1'))}</div><div class="col-12 col-md-6 col-xl-4">${card('Monthly commitments by category', canvas('c2'))}</div>
   <div class="col-12 col-md-6 col-xl-4">${card('Bills paid vs unpaid (' + esc(a.month) + ')', canvas('c3'))}</div>
   <div class="col-12 col-md-6 col-xl-4">${card('Bills this month by due date', canvas('c4'))}</div><div class="col-12 col-md-6 col-xl-4">${card('Cash vs reserved vs unallocated', canvas('c5'))}</div>
-  <div class="col-12 col-md-6 col-xl-4">${card('Runway gauge', canvas('c6', 'sm') + `<div class="text-center fw-bold">${d.runway_days != null ? Math.round(d.runway_days) : '–'} days of cash at ${fmt(d.levels.burn)}/day</div>`)}</div>
+  <div class="col-12 col-md-6 col-xl-4">${card('Runway gauge', canvas('c6', 'sm') + `<div class="text-center fw-bold">${d.runway_days != null ? Math.round(d.runway_days) + ' days' : '∞ – income covers spend'} of cash at ${fmt(d.levels.burn)}/day</div>`)}</div>
   <div class="col-12 col-xl-8">${card('Daily spending – last 30 days', canvas('c7'))}</div><div class="col-12 col-xl-4">${card('Debt payoff', a.debts.length ? a.debts.map(x => `<div class="mb-3"><div class="d-flex justify-content-between"><b>${esc(x.name)}</b><small>${fmt(x.remaining_amount)} left</small></div>${prog(x.progress, 'success', x.made + '/' + x.total)}</div>`).join('') : '<p class="text-secondary">No debts.</p>')}</div>
   <div class="col-12">${card('Upcoming 30 days timeline', table('tl', [{ k: 'due', label: 'Date', r: r => fmtD(r.due) }, { k: 'name', label: 'Item', r: r => `<b>${esc(r.name)}</b>${r.est ? ' <small class="text-secondary">~est</small>' : ''}` }, { k: 'kind', label: 'Type', r: r => pill(r.kind, 'secondary') }, { k: 'days', label: 'Days left', r: r => daysPill(r.days) }, { k: 'st', label: 'Status', nosort: true, r: r => r.days < 0 ? pill('overdue', 'danger') : pill('upcoming', 'primary') },
     { k: 'amount', label: 'Amount', num: true, r: r => fmt(r.amount), t: rs => fmt(sum(rs, r => r.amount)) }, { k: 'cum', label: 'Cumulative', num: true, nosort: true, r: r => fmt(a.upcoming.filter(u => u.due <= r.due).reduce((x, u) => x + u.amount, 0)) }], a.upcoming, { totals: true, sort: { k: 'due', dir: 1 } }))}</div></div>`;
@@ -591,7 +623,7 @@ async function pAnalytics(el) {
   mkChart('c3', { type: 'doughnut', data: { labels: ['Paid', 'Unpaid'], datasets: [{ data: [a.paid.amount, a.paid.unpaid_amount], backgroundColor: [COL.green, COL.amber], borderWidth: 0 }] }, options: { cutout: '55%', plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: c => ` ${c.label}: ${fmt(c.parsed)} (${c.dataIndex ? a.paid.unpaid_n : a.paid.n} bills)` } } } } });
   mkChart('c4', { type: 'bar', data: { labels: a.month_bars.map(b => `${b.due_day}th ${b.name}`), datasets: [{ data: a.month_bars.map(b => b.amount), backgroundColor: a.month_bars.map(b => b.paid ? COL.green : COL.blue) }] }, options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt(c.parsed.x) + (a.month_bars[c.dataIndex].paid ? ' (paid)' : ' (due)') } } }, scales: { x: { ticks: { callback: v => fmt(v) } } } } });
   mkChart('c5', { type: 'bar', data: { labels: ['Cash'], datasets: [{ label: 'Reserved for bills', data: [a.cash_split.reserved], backgroundColor: COL.amber }, { label: 'Unallocated', data: [Math.max(a.cash_split.unallocated, 0)], backgroundColor: COL.green }] }, options: { indexAxis: 'y', plugins: { tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${fmt(c.parsed.x)}` } }, legend: { position: 'bottom' } }, scales: { x: { stacked: true, ticks: { callback: v => fmt(v) } }, y: { stacked: true } } } });
-  const rd = Math.min(d.runway_days || 0, 120);
+  const rd = Math.min(d.runway_days == null ? 120 : d.runway_days, 120);
   mkChart('c6', { type: 'doughnut', data: { labels: ['Days of cash', 'to 120'], datasets: [{ data: [rd, 120 - rd], backgroundColor: [rd < 30 ? COL.red : rd < 60 ? COL.amber : COL.green, 'rgba(128,128,128,.2)'], borderWidth: 0 }] }, options: { rotation: -90, circumference: 180, cutout: '70%', plugins: { legend: { display: false }, tooltip: { enabled: false } } } });
   mkChart('c7', { type: 'bar', data: { labels: a.history.map(h => fmtS(h.date)), datasets: [{ label: 'Expenses', data: a.history.map(h => h.expense), backgroundColor: COL.red }, { label: 'Bill payments', data: a.history.map(h => h.bills), backgroundColor: COL.blue }] }, options: { plugins: { tooltip: money }, scales: { x: { stacked: true, ticks: { maxTicksLimit: 15 } }, y: { stacked: true, ticks: { callback: v => fmt(v) } } } } });
   projChart = null; drawProj(); renderHypo();

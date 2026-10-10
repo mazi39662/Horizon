@@ -2,6 +2,7 @@
 /* Hover descriptions. Keys are lower-case label text; matching is exact, then prefix. */
 const TIPS = {
   'hypothetical': 'A what-if scenario that is NOT counted as real cash.', 'hypotheticals': 'What-if income or expenses used only for projections.', 'notifications & warnings': 'Alerts and warnings about your finances.',
+  'partner income': 'Optional income from your partner; only counted when switched on and confirmed.', 'household income / month': 'Your confirmed income plus partner income when counted.', 'net monthly': 'Monthly income minus bills and daily spending; negative means you are burning savings.', 'safe / day with partner': 'Safe-to-spend per day including partner income until the horizon date.', 'partner adds by horizon': 'Partner income expected to arrive before the horizon date.',
   // dashboard
   'cash now': 'Total current cash across all your accounts.',
   'reserved for bills': 'Money set aside for bills due before your next payday.',

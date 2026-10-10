@@ -1,0 +1,191 @@
+{
+  "owner": "Boss",
+  "currency": "PHP",
+  "timezone": "Asia/Manila",
+  "last_updated": "2026-10-10T14:09:33+08:00",
+  "usd_php_rate": 57,
+  "accounts": [
+    {
+      "name": "Metrobank",
+      "balance": 37329.83,
+      "confirmed": true
+    },
+    {
+      "name": "Wallet",
+      "balance": 31000,
+      "confirmed": true
+    }
+  ],
+  "income": [
+    {
+      "name": "New job (pending)",
+      "amount": 40000,
+      "period": "monthly",
+      "pay_weekday": "Friday",
+      "status": "pending",
+      "confirmed": false,
+      "start_date": "2026-10-14",
+      "note": "Not hired yet; pay schedule uncertain. NOT counted as cash."
+    },
+    {
+      "name": "Mara",
+      "amount": 7800,
+      "period": "biweekly",
+      "status": "pending",
+      "confirmed": true,
+      "start_date": "2026-10-15",
+      "note": "Partner's Income",
+      "owner": "partner"
+    }
+  ],
+  "bills": [
+    {
+      "name": "Car loan",
+      "amount": 8206,
+      "due_day": 8,
+      "category": "debt",
+      "confirmed": true,
+      "status": {
+        "2026-10": "paid"
+      }
+    },
+    {
+      "name": "Google One",
+      "amount": 1100,
+      "due_day": 7,
+      "category": "subscription",
+      "confirmed": true,
+      "status": {
+        "2026-10": "paid"
+      }
+    },
+    {
+      "name": "Grok subscription",
+      "amount_usd": 30,
+      "amount": 1710,
+      "estimate": true,
+      "due_day": 7,
+      "category": "subscription",
+      "confirmed": true,
+      "status": {
+        "2026-10": "paid"
+      }
+    },
+    {
+      "name": "Boarding house",
+      "amount": 5000,
+      "due_day": 15,
+      "category": "necessity",
+      "confirmed": true,
+      "status": {},
+      "note": "Budget total: rent 3000 + water 300 fixed + electricity ~1500-2000 (est)"
+    },
+    {
+      "name": "Parking lot",
+      "amount": 1000,
+      "due_day": 15,
+      "due_day_confirmed": false,
+      "category": "necessity",
+      "confirmed": true,
+      "status": {},
+      "note": "Due around the 15th (approx, per Boss)"
+    }
+  ],
+  "debts": [
+    {
+      "name": "GCash loan",
+      "monthly": 1166,
+      "due_day": 7,
+      "principal": 7000,
+      "interest": null,
+      "payments_made": 1,
+      "payments_remaining": 6,
+      "status": {
+        "2026-10": "paid"
+      },
+      "paid_log": [
+        {
+          "date": "2026-10-08",
+          "amount": 1166,
+          "confirmed": true
+        }
+      ],
+      "total_payments": 7,
+      "note": "7 monthly payments total (Boss estimate); 1 paid"
+    }
+  ],
+  "transactions": [
+    {
+      "date": "2026-10-09",
+      "type": "bill_payment",
+      "amount": 8206,
+      "category": "bill",
+      "note": "Car loan",
+      "account": null
+    },
+    {
+      "date": "2026-10-09",
+      "type": "bill_payment",
+      "amount": 1100,
+      "category": "bill",
+      "note": "Google One",
+      "account": null
+    },
+    {
+      "date": "2026-10-09",
+      "type": "bill_payment",
+      "amount": 1710,
+      "category": "bill",
+      "note": "Grok subscription",
+      "account": null
+    }
+  ],
+  "savings": {
+    "emergency_fund": 0,
+    "emergency_target_months": 3
+  },
+  "business": {
+    "name": "Computer shop",
+    "pc_price": 19600,
+    "pcs_min": 3,
+    "pcs_max": 4,
+    "room_build": 30000,
+    "status": "not_affordable_yet",
+    "rule": "Wait for confirmed paychecks and a 2-3 month emergency fund before spending on the business."
+  },
+  "reminders": {
+    "days_before": [
+      3,
+      1
+    ],
+    "time": "09:00",
+    "time_assumed": true,
+    "payday_weekday": "Friday",
+    "month_end_summary": true
+  },
+  "alerts": [
+    "Parking due ~15th (approximate). GCash: 6 payments left (Boss estimate).",
+    "Confirm job on Oct 14 and salary."
+  ],
+  "missing_info": [
+    "Monthly food/transport spend",
+    "Job confirmation / salary / pay schedule",
+    "Other bills"
+  ],
+  "goals": [],
+  "settings": {
+    "horizon_date": "2027-01-01",
+    "daily_food_transport": 300,
+    "emergency_reserve": 0,
+    "warning_threshold": null,
+    "critical_threshold": null
+  },
+  "partner": {
+    "enabled": true,
+    "name": "Partner",
+    "monthly_income": 0,
+    "pay_weekday": "Friday",
+    "confirmed": false,
+    "notes": ""
+  }
+}
